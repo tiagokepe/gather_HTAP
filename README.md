@@ -4,16 +4,11 @@ The workloads are based on the paper: [Gather-scatter DRAM: in-DRAM Address Tran
 
 The workloads set up is the following:
 
-*In-memory databases
-
-*Row-oriented layout
-
-*Single table with 8 columns of 8-bytes (double)
-
-*Tuple size of 64-bytes, fitting in one cache line
-
-*1 milling tuples
-
+* In-memory databases
+* Row-oriented layout
+* Single table with 8 columns of 8-bytes (double)
+* Tuple size of 64-bytes, fitting in one cache line
+* 1 million tuples
 
 ## Analityc Workload
 
