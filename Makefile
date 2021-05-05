@@ -1,11 +1,11 @@
 CCFLAGS = -march=native
 TARGET=analytic_gather
 
-all: utils.o analytic_workload.o
-	$(CC) -o $(TARGET) utils.o analytic_workload.o
+all: utils.o analytic_gather.o
+	$(CC) -o $(TARGET) utils.o analytic_gather.o
 
-analytic_workload.o: src/analytic_workload.c
-	$(CC) -c $(CCFLAGS) src/analytic_workload.c
+analytic_gather.o: src/analytic_gather.c
+	$(CC) -c $(CCFLAGS) src/analytic_gather.c
 
 utils.o: src/utils/utils.c
 	$(CC) -c $(CCFLAGS) src/utils/utils.c
