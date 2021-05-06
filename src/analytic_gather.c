@@ -9,7 +9,19 @@
 
 void sum_two_cols(const double *table, double *sum, size_t idx_col1, size_t idx_col2);
 
-int main() {
+int main(int argc, char **argv) {
+    if(argc != 3) {
+        printf("Usage: %s idx_col1 idx_col2\n", argv[0]);
+        exit(1);
+    }
+
+    size_t idx_col1 = atoi(argv[1]);
+    size_t idx_col2 = atoi(argv[2]);
+    if(idx_col1 >= NUM_COLS || idx_col2 >= NUM_COLS) {
+        printf("sum_two_rand_cols(): Column indexes out of bound\n");
+        exit(1);
+    }
+
     double *table = (double*)aligned_alloc(TUPLE_SIZE, sizeof(double) * NUM_TUPLES * NUM_COLS);
     #if DEBUG
     populate_table(table);
@@ -17,7 +29,7 @@ int main() {
     #endif
 
     double *sum_cols = (double*)aligned_alloc(TUPLE_SIZE, sizeof(double) * NUM_TUPLES);
-    sum_two_cols(table, sum_cols, 0, 1);
+    sum_two_cols(table, sum_cols, idx_col1, idx_col2);
     #if DEBUG
     print_sum_col(sum_cols);
     #endif
