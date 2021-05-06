@@ -3,9 +3,9 @@ TARGET=analytic_gather
 
 all: gather column
 
-column: CCFLAGS=$(CPPFLAFS)
+column: CCFLAGS=$(CPPFLAGS)
 column: src/analytic_column.c
-	$(CC) -o $(CCFLAGS) analytic_column src/analytic_column.c
+	$(CC) $(CCFLAGS) -o analytic_column src/analytic_column.c
 
 gather: utils.o analytic_gather.o
 	$(CC) -o $(TARGET) utils.o analytic_gather.o
@@ -18,7 +18,6 @@ utils.o: src/utils/utils.c
 
 debug: CPPFLAGS = -DDEBUG
 debug: CCFLAGS += $(CPPFLAGS)
-debug: TARGET=analytic_gather_debug
 debug: gather column
 
 clean:

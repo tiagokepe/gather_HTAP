@@ -41,6 +41,7 @@ void sum_two_cols(double *sum, const double *col1, const double *col2) {
     }
 }
 
+#if DEBUG
 void populate_table(double **table) {
     for(size_t i=0; i < NUM_COLS; ++i) {
         for(size_t j=0; j < NUM_TUPLES; ++j) {
@@ -71,3 +72,4 @@ void print_column(const double *col) {
     }
     printf("]\n");
 }
+#endif
