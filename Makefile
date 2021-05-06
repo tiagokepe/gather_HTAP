@@ -3,7 +3,7 @@ TARGET=analytic_gather
 
 all: gather column
 
-column: CCFLAGS=
+column: CCFLAGS=$(CPPFLAFS)
 column: src/analytic_column.c
 	$(CC) -o $(CCFLAGS) analytic_column src/analytic_column.c
 
