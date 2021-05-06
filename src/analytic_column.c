@@ -8,9 +8,17 @@ void sum_two_cols(double *sum, const double *col1, const double *col2);
 void populate_table(double **table);
 void print_table(double **table);
 void print_column(const double *col);
-#endif 
+#endif
 
 int main(int argc, char **argv) {
+    if(argc != 3) {
+        printf("Usage: %s idx_col1 idx_col2\n", argv[0]);
+        exit(1);
+    }
+
+    size_t idx_col1 = atoi(argv[1]);
+    size_t idx_col2 = atoi(argv[2]);
+
     double **table = (double**)malloc(sizeof(double *) * NUM_COLS);
     for(size_t i=0; i < NUM_COLS; ++i) {
         table[i] = (double *)malloc(sizeof(double) * NUM_TUPLES);
@@ -22,12 +30,12 @@ int main(int argc, char **argv) {
     #endif
 
     double *sum_col = (double *)malloc(sizeof(double) * NUM_TUPLES);
-    sum_two_cols(sum_col, table[1], table[2]);
+    sum_two_cols(sum_col, table[idx_col1], table[idx_col2]);
 
     #if DEBUG
     print_column(sum_col);
     #endif
-        
+
     for(size_t i=0; i < NUM_COLS; ++i) {
         free(table[i]);
     }
