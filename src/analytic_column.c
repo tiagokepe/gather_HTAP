@@ -13,7 +13,7 @@ void print_column(const double *col);
 
 int main(int argc, char **argv) {
     if(argc != 5) {
-        printf("Usage: %s TUPLES_SIZE NUM_COLS idx_col1 idx_col2\n", argv[0]);
+        printf("Usage: %s TUPLE_SIZE NUM_COLS idx_col1 idx_col2\n", argv[0]);
         exit(1);
     }
 
