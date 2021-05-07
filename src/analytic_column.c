@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
     size_t idx_col1 = atoi(argv[1]);
     size_t idx_col2 = atoi(argv[2]);
     if(idx_col1 >= NUM_COLS || idx_col2 >= NUM_COLS) {
-        printf("sum_two_rand_cols(): Column indexes out of bound\n");
+        printf("ERROR: Column indexes out of bound\n");
         exit(1);
     }
 

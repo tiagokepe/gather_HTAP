@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
     size_t idx_col1 = atoi(argv[1]);
     size_t idx_col2 = atoi(argv[2]);
     if(idx_col1 >= NUM_COLS || idx_col2 >= NUM_COLS) {
-        printf("sum_two_rand_cols(): Column indexes out of bound\n");
+        printf("ERROR: Column indexes out of bound\n");
         exit(1);
     }
 
@@ -39,15 +39,11 @@ int main(int argc, char **argv) {
 }
 
 void sum_two_cols(const double *table, double *sum, size_t idx_col1, size_t idx_col2) {
-    if(idx_col1 >= NUM_COLS || idx_col2 >= NUM_COLS) {
-        printf("sum_two_rand_cols(): Column indexes out of bound\n");
-        exit(1);
-    }
     #if DEBUG
     printf("\n----SUM columns %li and %li-----\n", idx_col1, idx_col2);
     #endif
 
-    __m512i vindex = _mm512_set_epi64(0,SZ,SZ*2,SZ*3,SZ*4,SZ*5,SZ*6,SZ*7);
+    __m512i vindex = _mm512_set_epi64(0, TUPLE_SIZE, TUPLE_SIZE*2, TUPLE_SIZE*3, TUPLE_SIZE*4, TUPLE_SIZE*5, TUPLE_SIZE*6, TUPLE_SIZE*7);
     size_t stride_addr;
     size_t stride_col1, stride_col2;
     for(size_t stride_idx=0; stride_idx < NUM_TUPLES; stride_idx+=8) {
