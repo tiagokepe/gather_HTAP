@@ -11,13 +11,16 @@ void print_column(const double *col);
 #endif
 
 int main(int argc, char **argv) {
-    if(argc != 3) {
-        printf("Usage: %s idx_col1 idx_col2\n", argv[0]);
+    if(argc != 5) {
+        printf("Usage: %s TUPLES_SIZE NUM_COLS idx_col1 idx_col2\n", argv[0]);
         exit(1);
     }
 
-    size_t idx_col1 = atoi(argv[1]);
-    size_t idx_col2 = atoi(argv[2]);
+    size_t TUPLES_SIZE = atoi(argv[1]);
+    size_t NUM_COLS = atoi(argv[2]);
+
+    size_t idx_col1 = atoi(argv[3]);
+    size_t idx_col2 = atoi(argv[4]);
     if(idx_col1 >= NUM_COLS || idx_col2 >= NUM_COLS) {
         printf("ERROR: Column indexes out of bound\n");
         exit(1);

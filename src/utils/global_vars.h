@@ -1,0 +1,4 @@
+// GLOBAL VARIABLES
+
+size_t TUPLE_SIZE;
+size_t NUM_COLS;

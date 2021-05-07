@@ -1,5 +1,6 @@
 #include <immintrin.h>
 #include "defines.h"
+#include "global_vars.h"
 
 void populate_table(double *table);
 void print_table(const double *table);
