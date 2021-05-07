@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "utils/defines.h"
+#include "utils/global_vars.h"
 
 void sum_two_cols(double *sum, const double *col1, const double *col2);
 
@@ -16,8 +17,8 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    size_t TUPLES_SIZE = atoi(argv[1]);
-    size_t NUM_COLS = atoi(argv[2]);
+    TUPLE_SIZE = atoi(argv[1]);
+    NUM_COLS = atoi(argv[2]);
 
     size_t idx_col1 = atoi(argv[3]);
     size_t idx_col2 = atoi(argv[4]);
