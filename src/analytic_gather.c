@@ -28,7 +28,14 @@ int main(int argc, char **argv) {
     }
 
     double *table = (double*)aligned_alloc(TUPLE_SIZE, sizeof(double) * NUM_TUPLES * NUM_COLS);
+    if(!table) {
+        double alloc_size = (sizeof(double) * NUM_TUPLES * NUM_COLS) / 1024/1024/1024;
+        printf("Table can't be allocated, the size is too big -> %.1f GB\n", alloc_size);
+        exit(1);
+    }
+
     #if DEBUG
+    printf("table pointer: %p\n", table);
     populate_table(table);
     print_table(table);
     #endif
@@ -40,6 +47,7 @@ int main(int argc, char **argv) {
     #endif
  
     free(table);
+    free(sum_cols);
     return 0;
 }
 
