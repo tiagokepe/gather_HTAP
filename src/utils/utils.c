@@ -19,7 +19,7 @@ void populate_table(double *table) {
     for(size_t i=0; i < NUM_TUPLES; ++i) {
         for(size_t j=0; j < NUM_COLS; ++j) {
             col_idx = i*NUM_COLS + j;
-            table[col_idx] = (float)col_idx;
+            table[col_idx] = (double)col_idx;
         }
     }
 }
