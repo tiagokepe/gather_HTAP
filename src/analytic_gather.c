@@ -53,26 +53,35 @@ int main(int argc, char **argv) {
     }
 
     double *table = (double*)aligned_alloc(TUPLE_SIZE, sizeof(double) * NUM_TUPLES * NUM_COLS);
-    //#if DEBUG
+    double *tableb = (double*)aligned_alloc(TUPLE_SIZE, sizeof(double) * NUM_TUPLES * NUM_COLS);
+	
+	//#if DEBUG
     populate_table(table);
+	for (uint32_t i = 0; i < NUM_TUPLES*NUM_COLS; i++)
+	{
+		tableb[i] = 41.0;
+	}
+
     //print_table(table);
     //#endif
 
-    double *sum_cols = (double*)aligned_alloc(TUPLE_SIZE, sizeof(double) * NUM_TUPLES);
-    sum_two_cols(table, sum_cols, idx_col1, idx_col2);
-    #if DEBUG
-    print_sum_col(sum_cols);
-    #endif
+//    double *sum_cols = (double*)aligned_alloc(TUPLE_SIZE, sizeof(double) * NUM_TUPLES);
+  //  sum_two_cols(table, sum_cols, idx_col1, idx_col2);
+   // #if DEBUG
+   // print_sum_col(sum_cols);
+   // #endif
 
 	//__mmask8 * bitmap = (__mmask8*)aligned_alloc(TUPLE_SIZE, sizeof(__mmask8)*(NUM_TUPLES << 3)); //8b per position, representing bitmap
 	//memset(bitmap, 0, sizeof(__mmask8) * NUM_TUPLES << 3);	
 	//uint64_t totalmatches = filter(table, 3, 50.0, bitmap);
 	//printf("%u\n", bitmap[0]); 
 
+//	uint64_t proj_size = TUPLE_SIZE << 3 ;//div by 8, as each field occupies 8B
 	uint64_t proj_size = 2;
-	uint64_t * projfields = (uint64_t *)aligned_alloc(TUPLE_SIZE, sizeof(uint64_t)*proj_size);
+
+	uint64_t * projfields = (uint64_t *)aligned_alloc(TUPLE_SIZE, sizeof(uint64_t));
 	projfields[0] = 3;
-	projfields[1] = 5;
+	projfields[1] = 4;
 	
 	//double ** projected = (double **)aligned_alloc(TUPLE_SIZE, sizeof(double*)*proj_size);
 	//for (int i = 0; i < proj_size; i++){
@@ -80,19 +89,52 @@ int main(int argc, char **argv) {
 	//	memset(projected[i], 0, sizeof(double) * totalmatches);
 	//}
 	//project(table, bitmap, projfields, proj_size, projected);
-	aggfunction aggfunc = NOTHING;
 
-	double ** projected = (double **)aligned_alloc(TUPLE_SIZE, sizeof(double*)*proj_size);
-	uint64_t totalmatches = Q1_7(table, projfields, proj_size, projected, aggfunc, 7, 50.0 , 1);
-	printf("projected fields:\n");
+
+//Q1-7
+	aggfunction aggfunc = AVG;
+
+//	double ** projected = (double **)aligned_alloc(TUPLE_SIZE, sizeof(double*)*proj_size);
+//	double * res = (double*)Q1_7(table, projfields, proj_size, projected, aggfunc, 10, 100000.0 , 1);
+//	double sum = res[0];
+//	printf("aggregate result: %lf\n", sum);
+
+
+//############################
+	
+//Q8-9
+	size_t list1[2] = { 9, 1};
+	size_t list2[2] = { 9, 1};
+	uint32_t list3[2] = {0, 2};
+
+	uint64_t outlen = 0;
+
+	address_pair * res2 = (address_pair*)hash_join(table, tableb, &list1[0], &list2[0], &list3[0], 2, NUM_TUPLES, NUM_TUPLES, &outlen);
+	printf("got outlen %lu\n", outlen);
+
+	double ** projected = (double **)aligned_alloc(TUPLE_SIZE, sizeof(double*)*outlen);
 	for (int i = 0; i < proj_size; i++){
-		for (int j = 0; j < totalmatches; j++){
-		
+		projected[i] = (double *)aligned_alloc(TUPLE_SIZE, sizeof(double)*outlen);
+		memset(projected[i], 0, sizeof(double) * outlen);
+	}
+	for (size_t i = 0; i < outlen; i++)
+	{
+		projected[0][i] = res2->addr1[3];
+		projected[1][i] = res2->addr2[4];
+	}
+	
+
+//########################
+
+	uint64_t totalmatches = outlen;
+	printf("projected fields:\n");
+	for (int j = 0; j < totalmatches; j++){
+		for (int i = 0; i < proj_size; i++){
+		if (totalmatches > 0)		
 			printf("%lf ", projected[i][j]);
 		}
 			printf("\n");
 	}
-	
  
     free(table);
 	free(projfields);
