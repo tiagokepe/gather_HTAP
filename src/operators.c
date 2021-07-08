@@ -19,9 +19,9 @@ uint64_t filter(const double *table, size_t idx_col1, double val, __mmask8 * bit
     size_t stride_addr;
     size_t stride_col;
 
-	uint64_t base_address = 0;
+	uint64_t popcnt = 0;
 	
-	const int op1 = 17;
+	const int op1 = 30;
 	__m512d col_vec2 = _mm512_set1_pd(val);//sets 2nd avx reg with val in all positions 
     for(size_t stride_idx=0; stride_idx < NUM_TUPLES; stride_idx+=8) {
         stride_addr = stride_idx * NUM_COLS;
@@ -38,10 +38,44 @@ uint64_t filter(const double *table, size_t idx_col1, double val, __mmask8 * bit
 
 		//convert mask bits to integer and count bits		
 		uint32_t maskbits_gpr = _cvtmask8_u32(res_vec_mask);
-		base_address += _mm_popcnt_u32(maskbits_gpr);
+		popcnt += _mm_popcnt_u32(maskbits_gpr);
 	}
-	return base_address;
+	return popcnt;
 }
+
+
+uint64_t filterAND(const double *table, size_t idx_col1, double val, __mmask8 * bitmap)
+{
+	//gather stride
+    __m512i vindex = _mm512_set_epi64(0, TUPLE_SIZE, TUPLE_SIZE*2, TUPLE_SIZE*3, TUPLE_SIZE*4, TUPLE_SIZE*5, TUPLE_SIZE*6, TUPLE_SIZE*7);
+	
+    size_t stride_addr;
+    size_t stride_col;
+
+	uint64_t popcnt = 0;
+	
+	const int op1 = 30;
+	__m512d col_vec2 = _mm512_set1_pd(val);//sets 2nd avx reg with val in all positions 
+    for(size_t stride_idx=0; stride_idx < NUM_TUPLES; stride_idx+=8) {
+        stride_addr = stride_idx * NUM_COLS;
+        stride_col = stride_addr + idx_col1;
+        __m512d col_vec1 = _mm512_i64gather_pd(vindex, &table[stride_col], 1); //do the gather col1
+
+        __mmask8 res_vec_mask = _mm512_cmp_pd_mask(col_vec1, col_vec2, op1); //mask = col1 OP col2
+
+		//AND approach: load bitmap, AND, store bitmap.
+		__mmask8 current_val = _load_mask8(&bitmap[(stride_idx >> 3)]);
+		res_vec_mask = _kand_mask8(res_vec_mask, current_val);
+
+		_store_mask8(&bitmap[(stride_idx >> 3)], res_vec_mask);	
+
+		//convert mask bits to integer and count bits		
+		uint32_t maskbits_gpr = _cvtmask8_u32(res_vec_mask);
+		popcnt += _mm_popcnt_u32(maskbits_gpr);
+	}
+	return popcnt;
+}
+
 
 void project(const double *table, __mmask8 *bitmap, uint64_t * proj_vec, uint64_t proj_size, double ** projected)
 {
@@ -98,7 +132,7 @@ void * aggregate(const double *table, double *proj_col, size_t len, aggfunction 
 			break;
 		}
 		case COUNT:{
-			return &len;
+			return len;
 			break;
 		}	
 		default:
@@ -108,7 +142,7 @@ void * aggregate(const double *table, double *proj_col, size_t len, aggfunction 
 	return NULL;
 }
 
-address_pair * hash_join(const double *a, const double *b, size_t * list1, size_t * list2,  uint32_t * list3, uint32_t lencomps, size_t lena, size_t lenb, size_t * outlen)
+address_pair * hash_join(const double *a, const double *b, size_t * listfieldsa, size_t * listfieldsb,  uint32_t * listcomps, uint32_t lencomps, size_t lena, size_t lenb, size_t * outlen)
 {
 
     size_t stride_addr;
@@ -131,7 +165,7 @@ address_pair * hash_join(const double *a, const double *b, size_t * list1, size_
 	// BUILD PHASE - HASH TABLE CONSTRUCTION USING THE SMALLEST TABLE
     for(size_t stride_idx=0; stride_idx < lena; stride_idx+=8) {
         stride_addr = stride_idx * NUM_COLS;
-        stride_col = stride_addr + list1[0]; //replace 1 by field var
+        stride_col = stride_addr + listfieldsa[0]; //replace 1 by field var
         __m512i keyvec = _mm512_i64gather_epi64(vindex, &a[stride_col], 1); //do the gather col1.. hopefully it works?! implicit double -> long int cast here
 		__m512i index = _mm512_fnv1a_epi64(keyvec);		 // "index" receives an index created using fnv1a hash
 
@@ -156,7 +190,7 @@ address_pair * hash_join(const double *a, const double *b, size_t * list1, size_
 	for (size_t stride_idx = 0; stride_idx < lenb; stride_idx+=8)
 	{	
         stride_addr = stride_idx * NUM_COLS;
-        stride_col = stride_addr + list2[0]; //2nd field var
+        stride_col = stride_addr + listfieldsb[0]; //2nd field var
 		//can't vectorize cause of tuple indirection
         __m512i keyvec = _mm512_i64gather_epi64(vindex, &b[stride_col], 1); //do the gather col1, implicit double -> long int cast here
 		__m512i index = _mm512_fnv1a_epi64(keyvec);		 // "index" receives an index created using fnv1a hash
@@ -183,22 +217,22 @@ address_pair * hash_join(const double *a, const double *b, size_t * list1, size_
 						double * tuple1 = (double*)aux->data.address;
 						double * tuple2 = (double*)data.address;	
 
-						for (int comps = 1; comps < lencomps; comps++) //first comparison was equal op used for hash table, now we run through every comparison operator in list3 passed for fields listed in list1 and list2
+						for (int comps = 1; comps < lencomps; comps++) //first comparison was equal op used for hash table, now we run through every comparison operator in listcomps passed for fields listed in listfieldsa and listfieldsb
 						{
-							switch(list3[comps]){
-							case 0: stillmatching = stillmatching && ( tuple1[list1[comps]] == tuple2[list2[comps]]);
+							switch(listcomps[comps]){
+							case 0: stillmatching = stillmatching && ( tuple1[listfieldsa[comps]] == tuple2[listfieldsb[comps]]);
 								break;
-							case 1: stillmatching = stillmatching && tuple1[list1[comps]] != tuple2[list2[comps]];
+							case 1: stillmatching = stillmatching && tuple1[listfieldsa[comps]] != tuple2[listfieldsb[comps]];
 								break;
-							case 2: stillmatching = stillmatching && tuple1[list1[comps]] > tuple2[list2[comps]];
+							case 2: stillmatching = stillmatching && tuple1[listfieldsa[comps]] > tuple2[listfieldsb[comps]];
 								break;
-							case 3: stillmatching = stillmatching && tuple1[list1[comps]] >= tuple2[list2[comps]];
+							case 3: stillmatching = stillmatching && tuple1[listfieldsa[comps]] >= tuple2[listfieldsb[comps]];
 								break;
 							case 4: {
-									stillmatching = stillmatching && tuple1[list1[comps]] < tuple2[list2[comps]];
+									stillmatching = stillmatching && tuple1[listfieldsa[comps]] < tuple2[listfieldsb[comps]];
 									break;
 									}
-							case 5: stillmatching = stillmatching && tuple1[list1[comps]] <= tuple2[list2[comps]];
+							case 5: stillmatching = stillmatching && tuple1[listfieldsa[comps]] <= tuple2[listfieldsb[comps]];
 								break;
 							default:
 								printf("invalid comparison operator\n");	
@@ -239,7 +273,33 @@ void * Q1_7( const double *table, uint64_t * projfields, uint64_t projections, d
 	__mmask8 * bitmap = (__mmask8*)aligned_alloc(TUPLE_SIZE, sizeof(__mmask8)*(NUM_TUPLES >> 3)); //8b per position, representing bitmap
 	memset(bitmap, 0, sizeof(__mmask8) * NUM_TUPLES >> 3);	
 	totalmatches = filter(table, idx_f10, x, bitmap);
-	printf("got totalmatches %lu\n", totalmatches);
+	printf("totalmatches inside = %lu\n", totalmatches);
+
+	for (int i = 0; i < projections; i++){
+		projected[i] = (double *)aligned_alloc(TUPLE_SIZE, sizeof(double)*totalmatches);
+		memset(projected[i], 0, sizeof(double) * totalmatches);
+	}
+	project(table, bitmap, projfields, projections, projected);		
+
+	if (aggop != NOTHING){
+		return aggregate(table, projected[0], totalmatches, aggop);
+	}	
+
+	free(bitmap);
+	return totalmatches;
+}
+
+
+uint64_t Q10_11( const double *table, uint64_t * projfields, uint64_t projections, double ** projected, aggfunction aggop, size_t * fields, double * targets, size_t comps)
+{
+	uint64_t totalmatches;
+	__mmask8 * bitmap = (__mmask8*)aligned_alloc(TUPLE_SIZE, sizeof(__mmask8)*(NUM_TUPLES >> 3)); //8b per position, representing bitmap
+	memset(bitmap, 0xff, sizeof(__mmask8) * NUM_TUPLES >> 3);	//initialize bitmap with 1 in every field
+	for (int i  = 0; i < comps; i++)
+	{
+		totalmatches = filterAND(table, fields[i], targets[i], bitmap);
+	}	
+	printf("totalmatches = %lu\n", totalmatches);
 
 	for (int i = 0; i < projections; i++){
 		projected[i] = (double *)aligned_alloc(TUPLE_SIZE, sizeof(double)*totalmatches);
