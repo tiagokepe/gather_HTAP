@@ -12,7 +12,7 @@
 #include <unistd.h>
 
 typedef struct keyval{
-	int64_t key;
+	double key;
 	double * address;
 } keyval;
 

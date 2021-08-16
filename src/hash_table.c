@@ -42,10 +42,13 @@ void init_counter(ctype *counter){
 //*********************************************
 void store(keyval data, uint32_t index, htype *table, ctype *counter){
 	htype *node;
-
+		
+	//printf("storing data key %lu and address %lu\n", data.key, data.address);
+	//printf("currently, index has address %lu\n", table[index].data.address);
 	if (table[index].data.address == NULL)
 	{	// position is empty
 		table[index].data = data;						// key is stored
+	//	printf("valid fill\n");
 		table[index].hits++;
 		return;
 	} 
@@ -65,6 +68,7 @@ void store(keyval data, uint32_t index, htype *table, ctype *counter){
 		node->data = data;
 		htype *old, *start;
 		start = &table[index];
+		old = start;
 		//printf("Houve uma colisão no index %u\n. Chaves guardadas:", index); 
 		// it finds the end of the list
 		while (start){
@@ -82,7 +86,6 @@ void store(keyval data, uint32_t index, htype *table, ctype *counter){
 		table[index].hits++;
 		return;
 	}
-	
 }
 
 //*********************************************
@@ -136,7 +139,7 @@ void print_hashtable(htype *table, uint32_t size){
 		printf("\nÍNDICE: %u |\t CHAVES:", i);
 		aux = &table[i];
 		for (int j = 0; j < table[i].hits; j++){
-			printf(" %ld |", aux->data.key); 
+			printf(" %lf |", aux->data.key); 
 			aux = aux->next;
 		}
 		printf("\n");

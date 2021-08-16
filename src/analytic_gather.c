@@ -1,14 +1,14 @@
 #include <immintrin.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "utils/defines.h"
-#include "utils/global_vars.h" //TUPLE_SIZE and NUM_COLS
 #include <stdint.h>
 #include <string.h>
-//#include <math.h>
+#include <math.h>
 //#include <time.h>
 //#include <cstddef>
 //#include <typeinfo>
+#include "utils/defines.h"
+#include "utils/global_vars.h" //TUPLE_SIZE and NUM_COLS
 #include "operators.h"
 
 //#if DEBUG
@@ -36,10 +36,15 @@ void Q12( const double *table, size_t idx_f3, uint64_t targetval1, size_t idx_f4
 void Q13( const double *table, size_t idx_f9, uint64_t targetval, size_t idx_f10, uint32_t y, int op); //UPDATE table-a SET f9 = x WHERE f10 = z
 void Q14( const double *table, uint64_t proj_map, uint64_t aggfunc, size_t idx_f10, uint32_t x, int op); //SELECT SUM(f2-wide) FROM table-a 
 void Q15( const double *table, uint64_t proj_map, uint64_t aggfunc, size_t idx_f10, uint32_t x, int op); //SELECT f3,f6,f10 FROM table-a 
- 
+
+
+
+
+///############################################################################
+/// 
 int main(int argc, char **argv) {
-    if(argc != 7) {
-        printf("Usage: %s TUPLE_SIZE NUM_COLS idx_col1 idx_col2 tablevaluefile compop\n", argv[0]);
+    if(argc < 8) {
+        printf("Usage: %s TUPLE_SIZE NUM_COLS proj_size idx_col2 tableavaluefile tablebvaluefile proj1 proj2 etc\n", argv[0]);
         exit(1);
     }
 
@@ -54,101 +59,123 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    double *table = (double*)aligned_alloc(TUPLE_SIZE, sizeof(double) * NUM_TUPLES * NUM_COLS);
-    double *tableb = (double*)aligned_alloc(TUPLE_SIZE, sizeof(double) * NUM_TUPLES * NUM_COLS);
+///############################################################################
+///table initialization
+
+    double *table = (double*)aligned_alloc(65536, sizeof(double) * NUM_TUPLES * NUM_COLS); //normally TUPLE SIZE, let's spice it up
+    double *tableb = (double*)aligned_alloc(TUPLE_SIZE, sizeof(double) * NUM_TUPLES * NUM_COLS); // normally TUPLE SIZE, let's spice it up
 	
-	//#if DEBUG
-    populate_table(table);
-	//srand(time(NULL));
-	//double range = (double)(NUM_TUPLES*NUM_COLS*0.2);
-	//printf("range is %lf\n", range); 
-	FILE * inputfile = fopen(argv[5], "r");
-	//double input = 0;
-	//for (uint32_t i = 0; i < NUM_TUPLES*NUM_COLS; i++)
-	//{
-	 //	tableb[i] = (double)fmod((double)rand(),range);
-	//		printf("%lf\n", tableb[i]);
-			//fscanf(inputfile,"%lf ", &input);
-	//		tableb[i] = input;
-	//}
-	fread(tableb, 8, NUM_TUPLES*NUM_COLS, inputfile);
-
-	fclose(inputfile);
-
-    //print_table(table);
-    //#endif
+	FILE * tableafile = fopen(argv[5], "r");
+	if (tableafile == NULL)
+	{	
+		printf("failed to open tablea file\n");
+		exit(1);
+	}
+	size_t filestatus = fread(table, 8, NUM_TUPLES*NUM_COLS, tableafile);
+	if (filestatus != NUM_TUPLES*NUM_COLS)
+	{
+		printf("fread for tablea failed to read some items\n");
+	} 
+	fclose(tableafile);
+//	srand(time(NULL));
+//	double range = (double)(NUM_TUPLES*NUM_COLS*0.2);
+	FILE * tablebfile = fopen(argv[6], "r");
+	if (tablebfile == NULL)
+	{	
+		printf("failed to open tableb file\n");
+		exit(1);
+	}
+	filestatus = fread(tableb, 8, NUM_TUPLES*NUM_COLS, tablebfile);
+	if (filestatus != NUM_TUPLES*NUM_COLS)
+	{
+		printf("fread for tableb failed to read some items\n");
+	} 
+	fclose(tablebfile);
 
 //    double *sum_cols = (double*)aligned_alloc(TUPLE_SIZE, sizeof(double) * NUM_TUPLES);
   //  sum_two_cols(table, sum_cols, idx_col1, idx_col2);
-   // #if DEBUG
-   // print_sum_col(sum_cols);
-   // #endif
 
 
-	uint64_t a = sizeof(__mmask8);
-	printf("a = %lu\n", a);
 
-	uint64_t proj_size = 2;
 
-	uint64_t * projfields = (uint64_t *)aligned_alloc(TUPLE_SIZE, sizeof(uint64_t)*proj_size);
-	projfields[0] = 3;
-	projfields[1] = 4;
+///############################################################################
+///projection initialization
 
-//Q1-7
+	uint64_t proj_size = idx_col1;
+//	uint64_t proj_size = NUM_COLS;
+	uint64_t * projfields = (uint64_t *)malloc(sizeof(uint64_t)*proj_size);
+	for (int i = 0; i < proj_size; i++)
+	{
+		projfields[i] = atoi(argv[i+7]);
+//		projfields[i] = i;
+	}
+
+///############################################################################
+//Q1-7, Q10-11, Q14-Q15
 	aggfunction aggfunc = NOTHING;
-
+//
 	double ** projected = (double **)aligned_alloc(TUPLE_SIZE, sizeof(double*)*proj_size);
-//	double * sum = (double*)Q1_7(table, projfields, proj_size, projected, aggfunc, 10, (NUM_COLS << 10), 1);
-	size_t fields[2] = {1,9};
-	double targets[2] = {(double)(NUM_COLS << 20),(double) (NUM_COLS << 22)};
-	uint64_t totalmatches =	Q10_11(table, projfields, proj_size, projected, aggfunc, &fields[0], &targets[0], 2);
-	//double sum = res[0];
-	//printf("aggregate result: %lf\n", *sum);
-	printf("totalmatches = %lu\n", totalmatches);
-
-
-//############################
-	
+//	uint64_t * totalmatches = (uint64_t *)Q1_7(table, projfields, proj_size, projected, aggfunc, 10, (double)(TUPLE_SIZE << 10), 1);
+//	double * sum = (double *)Q1_7(table, projfields, proj_size, projected, aggfunc, 10, (double)(TUPLE_SIZE << 10), 1);
+	size_t fields[2] = {1,2};
+	double targets[2] = {(double)NUM_COLS, (double)TUPLE_SIZE};
+	uint32_t comps = 0;
+	uint64_t * totalmatches = (uint64_t *)Q10_11(table, projfields, proj_size, projected, aggfunc, &fields[0], &targets[0], comps);
+//	printf("aggregate result: %lf\n", *sum);
+//	free(sum);
+	printf("totalmatches = %lu\n", *totalmatches);
+	if (*totalmatches > 0)
+	{
+		printf("%lf \n", projected[0][(*totalmatches) - 1]);
+  }
+	free(totalmatches);
+///############################################################################
 //Q8-9
-/*	size_t list1[1] = { 9 };
-	size_t list2[1] = { 9 };
-	uint32_t list3[2] = {0};
+/*	const uint32_t comps = 1;
+	size_t list1[1] = { 9 };
+	size_t list2[1] = { 9  };
+	uint32_t list3[1] = {0 };
 
 	uint64_t outlen = 0;
 
-	address_pair * res2 = (address_pair*)hash_join(table, tableb, &list1[0], &list2[0], &list3[0], 1, NUM_TUPLES, NUM_TUPLES, &outlen);
-	printf("got outlen %lu\n", outlen);
+	address_pair * res2 = (address_pair*)hash_join(table, tableb, &list1[0], &list2[0], &list3[0], comps, NUM_TUPLES, NUM_TUPLES, &outlen);
+//	printf("got outlen %lu\n", outlen);
 
 	double ** projected = (double **)aligned_alloc(TUPLE_SIZE, sizeof(double*)*outlen);
-	for (int i = 0; i < proj_size; i++){
+	for (int i = 0; i < proj_size; i++)
+	{
 		projected[i] = (double *)aligned_alloc(TUPLE_SIZE, sizeof(double)*outlen);
 		memset(projected[i], 0, sizeof(double) * outlen);
-	}
-	for (size_t i = 0; i < outlen; i++)
-	{
-		projected[0][i] = res2->addr1[3];
-		projected[1][i] = res2->addr2[4];
-	}
-
-	printf("projected last %lf\n", projected[0][outlen-1]);	
-*/
-//########################
-
-//	uint64_t totalmatches = outlen;
-	printf("projected fields:\n");
-	for (int j = 0; j < totalmatches; j++){
-		for (int i = 0; i < proj_size; i++){
-			if (totalmatches > 0)		
-				printf("%lf ", projected[i][j]);
+		for (size_t k = 0; k < outlen; k++)
+		{
+			projected[i][k] = res2[i].addr1[projfields[i]];
 		}
-		printf("\n");
 	}
+	if (outlen > 0)
+		printf("projected last %lf\n", projected[0][outlen-1]);	
+	else
+		printf(" no matches\n");
+*/
 
-/*	if (totalmatches > 0)
-	{
-		printf("%lf \n", projected[0][totalmatches-1]);
-    }*/
+///############################################################################
+//Q12-Q13
+/*
+//	size_t idx_upds[2] = {3,4};
+	size_t idx_upds[1] = {9};
+//	double updatevals[2] = {(double)NUM_COLS, (double)NUM_TUPLES };
+	double updatevals[1] = {(double)NUM_COLS };
+	size_t checkfield = atoi(argv[7]);
+//	uint64_t upds = 2;
+	uint64_t upds = 1;
+	uint64_t totalmatches = UPDATEfilter(table, checkfield, 41.0, &updatevals[0], &idx_upds[0], upds); 
+	printf("totmatches = %lu\n", totalmatches);
+*/
+
+
+///############################################################################
+///finalize, free memory	
 	free(table);
+	free(tableb);
 	free(projfields);
 	for (int i = 0; i < proj_size; i++){
 		free(projected[i]);
